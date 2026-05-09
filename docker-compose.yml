@@ -1,0 +1,96 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:16-alpine
+    container_name: dataharvest-postgres
+    environment:
+      POSTGRES_USER: ${DB_USER:-dataharvest_user}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-dataharvest_pass}
+      POSTGRES_DB: ${DB_NAME:-dataharvest}
+    ports:
+      - '${DB_PORT:-5432}:5432'
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${DB_USER:-dataharvest_user}']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - dataharvest-network
+
+  # Redis (for BullMQ)
+  redis:
+    image: redis:7-alpine
+    container_name: dataharvest-redis
+    ports:
+      - '${REDIS_PORT:-6379}:6379'
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    networks:
+      - dataharvest-network
+
+  # Application
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: dataharvest-app
+    environment:
+      NODE_ENV: ${NODE_ENV:-development}
+      PORT: ${PORT:-3000}
+
+      # Database
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: ${DB_USER:-dataharvest_user}
+      DB_PASSWORD: ${DB_PASSWORD:-dataharvest_pass}
+      DB_NAME: ${DB_NAME:-dataharvest}
+
+      # Redis
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-}
+
+      # Queue Configuration
+      SCRAPER_CONCURRENCY: ${SCRAPER_CONCURRENCY:-3}
+      TRANSFORMER_CONCURRENCY: ${TRANSFORMER_CONCURRENCY:-5}
+      PERSISTER_CONCURRENCY: ${PERSISTER_CONCURRENCY:-2}
+
+      # Rate Limiting
+      MIN_REQUEST_DELAY_MS: ${MIN_REQUEST_DELAY_MS:-1000}
+
+      # Scheduler
+      BOOKS_CRON: ${BOOKS_CRON:-0 2 * * *}
+      HN_CRON: ${HN_CRON:-*/15 * * * *}
+
+      # Logging
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+    ports:
+      - '${PORT:-3000}:3000'
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - dataharvest-network
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+
+networks:
+  dataharvest-network:
+    driver: bridge
