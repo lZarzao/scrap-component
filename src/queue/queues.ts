@@ -76,7 +76,7 @@ const baseQueueOptions: QueueOptions = {
  * Queue instances
  */
 export const queues = {
-  pending: new Queue<ScrapeJob>('scrape:pending', {
+  pending: new Queue<ScrapeJob>('scrape-pending', {
     ...baseQueueOptions,
     defaultJobOptions: {
       ...baseQueueOptions.defaultJobOptions,
@@ -88,7 +88,7 @@ export const queues = {
     },
   }),
 
-  raw: new Queue<RawDataJob>('scrape:raw', {
+  raw: new Queue<RawDataJob>('scrape-raw', {
     ...baseQueueOptions,
     defaultJobOptions: {
       ...baseQueueOptions.defaultJobOptions,
@@ -100,7 +100,7 @@ export const queues = {
     },
   }),
 
-  processed: new Queue<ProcessedDataJob>('scrape:processed', {
+  processed: new Queue<ProcessedDataJob>('scrape-processed', {
     ...baseQueueOptions,
     defaultJobOptions: {
       ...baseQueueOptions.defaultJobOptions,
@@ -112,7 +112,7 @@ export const queues = {
     },
   }),
 
-  dlq: new Queue<DLQJob>('scrape:dlq', {
+  dlq: new Queue<DLQJob>('scrape-dlq', {
     ...baseQueueOptions,
     defaultJobOptions: {
       ...baseQueueOptions.defaultJobOptions,
@@ -152,14 +152,21 @@ export const initQueues = async (): Promise<void> => {
 export const closeQueues = async (): Promise<void> => {
   logger.info('Closing all queues...', { module: 'queue' });
 
-  await Promise.all([
-    queues.pending.close(),
-    queues.raw.close(),
-    queues.processed.close(),
-    queues.dlq.close(),
-  ]);
+  try {
+    await Promise.race([
+      Promise.all([
+        queues.pending.close(),
+        queues.raw.close(),
+        queues.processed.close(),
+        queues.dlq.close(),
+      ]),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('Queue close timeout')), 5000)),
+    ]);
 
-  logger.info('All queues closed', { module: 'queue' });
+    logger.info('All queues closed', { module: 'queue' });
+  } catch (error) {
+    logger.warn('Queue close timeout, forcing exit', { module: 'queue' });
+  }
 };
 
 /**

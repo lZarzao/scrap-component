@@ -95,6 +95,42 @@ const initApp = (): Application => {
     }
   });
 
+  // Manual job trigger endpoint
+  expressApp.post('/api/v1/jobs/trigger', async (req, res) => {
+    try {
+      const { source } = req.body;
+
+      if (!source || (source !== 'books' && source !== 'hackernews')) {
+        return res.status(400).json({
+          error: 'Invalid source',
+          message: 'Source must be either "books" or "hackernews"',
+        });
+      }
+
+      const { triggerBooksScrape, triggerHNScrape } = await import('./scheduler/jobFactory');
+
+      let jobId: string;
+      if (source === 'books') {
+        jobId = await triggerBooksScrape();
+      } else {
+        jobId = await triggerHNScrape();
+      }
+
+      return res.json({
+        success: true,
+        jobId,
+        source,
+        message: 'Scrape job triggered successfully',
+      });
+    } catch (error) {
+      logger.error('Failed to trigger job', error as Error, { module: 'api' });
+      return res.status(500).json({
+        error: 'Failed to trigger job',
+        message: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+  });
+
   // 404 handler
   expressApp.use((req, res) => {
     res.status(404).json({
@@ -131,6 +167,16 @@ const start = async (): Promise<void> => {
     // Initialize queues
     logger.info('Initializing queue system...', { module: 'startup' });
     await initQueues();
+
+    // Initialize scraper worker
+    logger.info('Initializing scraper worker...', { module: 'startup' });
+    const { initScraperWorker } = await import('./workers/scraperWorker');
+    initScraperWorker();
+
+    // Initialize scheduler
+    logger.info('Initializing scheduler...', { module: 'startup' });
+    const { initScheduler } = await import('./scheduler');
+    initScheduler();
 
     // Initialize Express app
     logger.info('Initializing HTTP server...', { module: 'startup' });
@@ -187,6 +233,16 @@ const shutdown = async (signal: string): Promise<void> => {
       });
       logger.info('HTTP server closed', { module: 'shutdown' });
     }
+
+    // Stop scheduler
+    logger.info('Stopping scheduler...', { module: 'shutdown' });
+    const { stopScheduler } = await import('./scheduler');
+    stopScheduler();
+
+    // Close scraper worker
+    logger.info('Closing scraper worker...', { module: 'shutdown' });
+    const { closeScraperWorker } = await import('./workers/scraperWorker');
+    await closeScraperWorker();
 
     // Close queue system (wait for in-flight jobs)
     logger.info('Closing queue system...', { module: 'shutdown' });

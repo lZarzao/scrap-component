@@ -46,6 +46,7 @@ services:
     container_name: dataharvest-app
     environment:
       NODE_ENV: ${NODE_ENV:-development}
+      DOCKER_ENV: 'true'
       PORT: ${PORT:-3000}
 
       # Database

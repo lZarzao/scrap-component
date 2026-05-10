@@ -11,6 +11,10 @@ export interface LogContext {
   [key: string]: unknown;
 }
 
+// Determine if we should use pretty printing
+// Only in development AND when running locally (not in Docker)
+const usePrettyPrint = process.env.NODE_ENV === 'development' && !process.env.DOCKER_ENV;
+
 // Create base logger instance
 const baseLogger = pino({
   level: process.env.LOG_LEVEL || 'info',
@@ -24,18 +28,19 @@ const baseLogger = pino({
     err: pino.stdSerializers.err,
     error: pino.stdSerializers.err,
   },
-  // Pretty print for development
-  transport:
-    process.env.NODE_ENV === 'development'
-      ? {
+  // Pretty print only for local development
+  ...(usePrettyPrint
+    ? {
+        transport: {
           target: 'pino-pretty',
           options: {
             colorize: true,
             translateTime: 'HH:MM:ss Z',
             ignore: 'pid,hostname',
           },
-        }
-      : undefined,
+        },
+      }
+    : {}),
 });
 
 /**
