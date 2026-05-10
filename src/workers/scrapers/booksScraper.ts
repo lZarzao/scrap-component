@@ -23,24 +23,19 @@ const BASE_URL = 'https://books.toscrape.com';
 const HOST = 'books.toscrape.com';
 
 /**
- * Convert star rating class to number
+ * Extract star rating text from class name
+ * Returns the text representation ("One", "Two", etc.) to keep data RAW
  */
-const parseRating = (ratingClass: string): number => {
-  const ratingMap: Record<string, number> = {
-    One: 1,
-    Two: 2,
-    Three: 3,
-    Four: 4,
-    Five: 5,
-  };
+const extractRatingText = (ratingClass: string): string => {
+  const ratings = ['One', 'Two', 'Three', 'Four', 'Five'];
 
-  for (const [word, num] of Object.entries(ratingMap)) {
-    if (ratingClass.includes(word)) {
-      return num;
+  for (const rating of ratings) {
+    if (ratingClass.includes(rating)) {
+      return rating;
     }
   }
 
-  return 0; // Unknown rating
+  return 'Unknown'; // Unknown rating
 };
 
 /**
@@ -127,7 +122,7 @@ const scrapeCataloguePage = async (pageNum: number): Promise<RawBookData[]> => {
       const title = $book.find('h3 a').attr('title') || '';
       const price = $book.find('p.price_color').text().trim() || '0';
       const ratingClass = $book.find('p.star-rating').attr('class') || '';
-      const rating = parseRating(ratingClass).toString();
+      const rating = extractRatingText(ratingClass); // Keep as text for RAW data
       const availability = $book.find('p.availability').text().trim() || 'Unknown';
 
       // Extract category (breadcrumb)

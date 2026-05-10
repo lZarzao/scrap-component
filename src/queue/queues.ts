@@ -1,6 +1,7 @@
 import { Queue, QueueOptions, Job } from 'bullmq';
 import { Redis } from 'ioredis';
 import { logger } from '../logger';
+import type { ProcessedDataJob as ProcessedDataJobType } from '../types/schemas';
 
 /**
  * Job types
@@ -18,13 +19,11 @@ export interface RawDataJob {
   jobId: string;
   source: 'books' | 'hackernews';
   rawData: unknown;
+  scrapedAt?: string; // Optional timestamp for Phase 3 compatibility
 }
 
-export interface ProcessedDataJob {
-  jobId: string;
-  source: 'books' | 'hackernews';
-  data: unknown;
-}
+// Use the Zod schema type for consistency
+export type ProcessedDataJob = ProcessedDataJobType;
 
 export interface DLQJob {
   originalJobId: string;

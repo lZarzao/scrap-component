@@ -57,6 +57,7 @@ const processScrapeJob = async (job: Job<ScrapeJob>): Promise<void> => {
       jobId,
       source,
       rawData,
+      scrapedAt: new Date().toISOString(), // Add timestamp for Phase 3 compatibility
     };
 
     await queues.raw.add(`raw-${source}-${jobId}`, rawDataJob, {

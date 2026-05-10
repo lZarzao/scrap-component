@@ -131,6 +131,97 @@ const initApp = (): Application => {
     }
   });
 
+  // DLQ endpoints
+  expressApp.get('/api/v1/jobs/dlq', async (_req, res) => {
+    try {
+      const { getDLQJobs } = await import('./queue/dlq');
+      const jobs = await getDLQJobs();
+
+      return res.json({
+        count: jobs.length,
+        jobs: jobs.map((job) => ({
+          id: job.id,
+          data: job.data,
+          attemptsMade: job.attemptsMade,
+          timestamp: job.timestamp,
+        })),
+      });
+    } catch (error) {
+      logger.error('Failed to get DLQ jobs', error as Error, { module: 'api' });
+      return res.status(500).json({
+        error: 'Failed to get DLQ jobs',
+        message: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+  });
+
+  expressApp.get('/api/v1/jobs/dlq/stats', async (_req, res) => {
+    try {
+      const { getDLQStats } = await import('./queue/dlq');
+      const stats = await getDLQStats();
+
+      return res.json(stats);
+    } catch (error) {
+      logger.error('Failed to get DLQ stats', error as Error, { module: 'api' });
+      return res.status(500).json({
+        error: 'Failed to get DLQ stats',
+        message: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+  });
+
+  expressApp.post('/api/v1/jobs/dlq/:jobId/retry', async (req, res) => {
+    try {
+      const { jobId } = req.params;
+      const { retryDLQJob } = await import('./queue/dlq');
+      const success = await retryDLQJob(jobId);
+
+      if (!success) {
+        return res.status(404).json({
+          error: 'Job not found',
+          message: `DLQ job ${jobId} not found`,
+        });
+      }
+
+      return res.json({
+        success: true,
+        message: 'Job retried successfully',
+      });
+    } catch (error) {
+      logger.error('Failed to retry DLQ job', error as Error, { module: 'api' });
+      return res.status(500).json({
+        error: 'Failed to retry DLQ job',
+        message: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+  });
+
+  expressApp.delete('/api/v1/jobs/dlq/:jobId', async (req, res) => {
+    try {
+      const { jobId } = req.params;
+      const { removeDLQJob } = await import('./queue/dlq');
+      const success = await removeDLQJob(jobId);
+
+      if (!success) {
+        return res.status(404).json({
+          error: 'Job not found',
+          message: `DLQ job ${jobId} not found`,
+        });
+      }
+
+      return res.json({
+        success: true,
+        message: 'Job removed successfully',
+      });
+    } catch (error) {
+      logger.error('Failed to remove DLQ job', error as Error, { module: 'api' });
+      return res.status(500).json({
+        error: 'Failed to remove DLQ job',
+        message: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+  });
+
   // 404 handler
   expressApp.use((req, res) => {
     res.status(404).json({
@@ -172,6 +263,16 @@ const start = async (): Promise<void> => {
     logger.info('Initializing scraper worker...', { module: 'startup' });
     const { initScraperWorker } = await import('./workers/scraperWorker');
     initScraperWorker();
+
+    // Initialize transformer worker
+    logger.info('Initializing transformer worker...', { module: 'startup' });
+    const { createTransformerWorker } = await import('./transformer/transformerWorker');
+    createTransformerWorker();
+
+    // Initialize persister worker
+    logger.info('Initializing persister worker...', { module: 'startup' });
+    const { createPersisterWorker } = await import('./persister/persisterWorker');
+    createPersisterWorker();
 
     // Initialize scheduler
     logger.info('Initializing scheduler...', { module: 'startup' });
@@ -243,6 +344,16 @@ const shutdown = async (signal: string): Promise<void> => {
     logger.info('Closing scraper worker...', { module: 'shutdown' });
     const { closeScraperWorker } = await import('./workers/scraperWorker');
     await closeScraperWorker();
+
+    // Close transformer worker
+    logger.info('Closing transformer worker...', { module: 'shutdown' });
+    const { closeTransformerWorker } = await import('./transformer/transformerWorker');
+    await closeTransformerWorker();
+
+    // Close persister worker
+    logger.info('Closing persister worker...', { module: 'shutdown' });
+    const { closePersisterWorker } = await import('./persister/persisterWorker');
+    await closePersisterWorker();
 
     // Close queue system (wait for in-flight jobs)
     logger.info('Closing queue system...', { module: 'shutdown' });
