@@ -104,27 +104,6 @@ router.get(
 );
 
 /**
- * GET /api/v1/jobs/:id
- * Get single job detail
- */
-router.get(
-  '/:id',
-  validateUUID('id'),
-  asyncHandler(async (req: Request, res: Response) => {
-    const { id } = req.params;
-    const db = getDatabase();
-
-    const job = await db('scrape_jobs').where('id', id).first();
-
-    if (!job) {
-      throw new ApiError(404, 'Job not found', { jobId: id });
-    }
-
-    res.json(job);
-  })
-);
-
-/**
  * GET /api/v1/jobs/dlq
  * Inspect dead-letter queue contents
  */
@@ -232,6 +211,27 @@ router.post(
       originalJobId,
       targetQueue: failedQueue,
     });
+  })
+);
+
+/**
+ * GET /api/v1/jobs/:id
+ * Get single job detail
+ */
+router.get(
+  '/:id',
+  validateUUID('id'),
+  asyncHandler(async (req: Request, res: Response) => {
+    const { id } = req.params;
+    const db = getDatabase();
+
+    const job = await db('scrape_jobs').where('id', id).first();
+
+    if (!job) {
+      throw new ApiError(404, 'Job not found', { jobId: id });
+    }
+
+    res.json(job);
   })
 );
 

@@ -6,7 +6,7 @@ import { Knex } from 'knex';
 export async function up(knex: Knex): Promise<void> {
   await knex.schema.createTable('hn_stories', (table) => {
     table.uuid('id').primary().defaultTo(knex.raw('gen_random_uuid()'));
-    table.integer('hn_item_id').notNullable().unique();
+    table.bigInteger('hn_item_id').notNullable().unique();
     table.string('title', 500).notNullable();
     table.string('url', 1000).nullable();
     table.integer('score').notNullable().defaultTo(0).index();
