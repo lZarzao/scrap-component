@@ -15,7 +15,7 @@ let isShuttingDown = false;
 /**
  * Initialize Express application
  */
-const initApp = (): Application => {
+const initApp = async (): Promise<Application> => {
   const expressApp = express();
 
   // Middleware
@@ -38,189 +38,20 @@ const initApp = (): Application => {
     })
   );
 
-  // Health check endpoint
-  expressApp.get('/api/v1/health', async (_req, res) => {
-    if (isShuttingDown) {
-      return res.status(503).json({
-        status: 'shutting_down',
-        message: 'Server is shutting down',
-      });
-    }
+  // Import routers
+  const jobsRouter = (await import('./api/routes/jobs')).default;
+  const booksRouter = (await import('./api/routes/books')).default;
+  const storiesRouter = (await import('./api/routes/stories')).default;
+  const metricsRouter = (await import('./api/routes/metrics')).default;
+  const healthRouter = (await import('./api/routes/health')).default;
+  const { errorHandler } = await import('./api/middleware/errorHandler');
 
-    try {
-      // Check database connection
-      const { getDatabase } = await import('./db/client');
-      const db = getDatabase();
-      await db.raw('SELECT 1');
-
-      // Check Redis connection
-      const { createRedisClient } = await import('./queue/queues');
-      const redis = createRedisClient();
-      await redis.ping();
-      await redis.quit();
-
-      return res.json({
-        status: 'healthy',
-        timestamp: new Date().toISOString(),
-        uptime: process.uptime(),
-        environment: config.NODE_ENV,
-      });
-    } catch (error) {
-      logger.error('Health check failed', error as Error, { module: 'health' });
-      return res.status(503).json({
-        status: 'unhealthy',
-        message: 'Service dependencies are not available',
-      });
-    }
-  });
-
-  // Placeholder route for metrics
-  expressApp.get('/api/v1/metrics', async (_req, res) => {
-    try {
-      const { getQueueMetrics } = await import('./queue/queues');
-      const metrics = await getQueueMetrics();
-
-      res.json({
-        timestamp: new Date().toISOString(),
-        queues: metrics,
-        process: {
-          uptime: process.uptime(),
-          memory: process.memoryUsage(),
-          cpu: process.cpuUsage(),
-        },
-      });
-    } catch (error) {
-      logger.error('Failed to get metrics', error as Error, { module: 'metrics' });
-      res.status(500).json({ error: 'Failed to retrieve metrics' });
-    }
-  });
-
-  // Manual job trigger endpoint
-  expressApp.post('/api/v1/jobs/trigger', async (req, res) => {
-    try {
-      const { source } = req.body;
-
-      if (!source || (source !== 'books' && source !== 'hackernews')) {
-        return res.status(400).json({
-          error: 'Invalid source',
-          message: 'Source must be either "books" or "hackernews"',
-        });
-      }
-
-      const { triggerBooksScrape, triggerHNScrape } = await import('./scheduler/jobFactory');
-
-      let jobId: string;
-      if (source === 'books') {
-        jobId = await triggerBooksScrape();
-      } else {
-        jobId = await triggerHNScrape();
-      }
-
-      return res.json({
-        success: true,
-        jobId,
-        source,
-        message: 'Scrape job triggered successfully',
-      });
-    } catch (error) {
-      logger.error('Failed to trigger job', error as Error, { module: 'api' });
-      return res.status(500).json({
-        error: 'Failed to trigger job',
-        message: error instanceof Error ? error.message : 'Unknown error',
-      });
-    }
-  });
-
-  // DLQ endpoints
-  expressApp.get('/api/v1/jobs/dlq', async (_req, res) => {
-    try {
-      const { getDLQJobs } = await import('./queue/dlq');
-      const jobs = await getDLQJobs();
-
-      return res.json({
-        count: jobs.length,
-        jobs: jobs.map((job) => ({
-          id: job.id,
-          data: job.data,
-          attemptsMade: job.attemptsMade,
-          timestamp: job.timestamp,
-        })),
-      });
-    } catch (error) {
-      logger.error('Failed to get DLQ jobs', error as Error, { module: 'api' });
-      return res.status(500).json({
-        error: 'Failed to get DLQ jobs',
-        message: error instanceof Error ? error.message : 'Unknown error',
-      });
-    }
-  });
-
-  expressApp.get('/api/v1/jobs/dlq/stats', async (_req, res) => {
-    try {
-      const { getDLQStats } = await import('./queue/dlq');
-      const stats = await getDLQStats();
-
-      return res.json(stats);
-    } catch (error) {
-      logger.error('Failed to get DLQ stats', error as Error, { module: 'api' });
-      return res.status(500).json({
-        error: 'Failed to get DLQ stats',
-        message: error instanceof Error ? error.message : 'Unknown error',
-      });
-    }
-  });
-
-  expressApp.post('/api/v1/jobs/dlq/:jobId/retry', async (req, res) => {
-    try {
-      const { jobId } = req.params;
-      const { retryDLQJob } = await import('./queue/dlq');
-      const success = await retryDLQJob(jobId);
-
-      if (!success) {
-        return res.status(404).json({
-          error: 'Job not found',
-          message: `DLQ job ${jobId} not found`,
-        });
-      }
-
-      return res.json({
-        success: true,
-        message: 'Job retried successfully',
-      });
-    } catch (error) {
-      logger.error('Failed to retry DLQ job', error as Error, { module: 'api' });
-      return res.status(500).json({
-        error: 'Failed to retry DLQ job',
-        message: error instanceof Error ? error.message : 'Unknown error',
-      });
-    }
-  });
-
-  expressApp.delete('/api/v1/jobs/dlq/:jobId', async (req, res) => {
-    try {
-      const { jobId } = req.params;
-      const { removeDLQJob } = await import('./queue/dlq');
-      const success = await removeDLQJob(jobId);
-
-      if (!success) {
-        return res.status(404).json({
-          error: 'Job not found',
-          message: `DLQ job ${jobId} not found`,
-        });
-      }
-
-      return res.json({
-        success: true,
-        message: 'Job removed successfully',
-      });
-    } catch (error) {
-      logger.error('Failed to remove DLQ job', error as Error, { module: 'api' });
-      return res.status(500).json({
-        error: 'Failed to remove DLQ job',
-        message: error instanceof Error ? error.message : 'Unknown error',
-      });
-    }
-  });
+  // Register routes
+  expressApp.use('/api/v1/jobs', jobsRouter);
+  expressApp.use('/api/v1/books', booksRouter);
+  expressApp.use('/api/v1/stories', storiesRouter);
+  expressApp.use('/api/v1/metrics', metricsRouter);
+  expressApp.use('/api/v1/health', healthRouter);
 
   // 404 handler
   expressApp.use((req, res) => {
@@ -230,16 +61,8 @@ const initApp = (): Application => {
     });
   });
 
-  // Error handler
-  expressApp.use(
-    (err: Error, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
-      logger.error('Unhandled error', err, { module: 'express' });
-      res.status(500).json({
-        error: 'Internal Server Error',
-        message: config.NODE_ENV === 'development' ? err.message : 'Something went wrong',
-      });
-    }
-  );
+  // Error handler (must be last!)
+  expressApp.use(errorHandler);
 
   return expressApp;
 };
@@ -281,7 +104,7 @@ const start = async (): Promise<void> => {
 
     // Initialize Express app
     logger.info('Initializing HTTP server...', { module: 'startup' });
-    app = initApp();
+    app = await initApp();
 
     // Start server
     server = app.listen(config.PORT, () => {
