@@ -60,6 +60,15 @@ const envSchema = z.object({
 
   // Graceful Shutdown
   SHUTDOWN_TIMEOUT_MS: z.string().default('30000').transform(Number),
+
+  // Bull Board Dashboard
+  BULL_BOARD_ENABLED: z
+    .string()
+    .default('true')
+    .transform((val) => val === 'true'),
+  BULL_BOARD_PATH: z.string().default('/admin/queues'),
+  BULL_BOARD_USERNAME: z.string().default('admin'),
+  BULL_BOARD_PASSWORD: z.string().default(''),
 });
 
 /**

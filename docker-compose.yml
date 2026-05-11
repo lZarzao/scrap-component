@@ -75,6 +75,12 @@ services:
 
       # Logging
       LOG_LEVEL: ${LOG_LEVEL:-info}
+
+      # Bull Board Dashboard
+      BULL_BOARD_ENABLED: ${BULL_BOARD_ENABLED:-true}
+      BULL_BOARD_PATH: ${BULL_BOARD_PATH:-/admin/queues}
+      BULL_BOARD_USERNAME: ${BULL_BOARD_USERNAME:-admin}
+      BULL_BOARD_PASSWORD: ${BULL_BOARD_PASSWORD:-DataHarvest_Dev_2026!}
     ports:
       - '${PORT:-3000}:3000'
     depends_on:

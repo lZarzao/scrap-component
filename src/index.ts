@@ -57,6 +57,30 @@ const initApp = async (): Promise<Application> => {
   expressApp.use('/api/docs', docsRouter);
   expressApp.use('/metrics', prometheusRouter); // Prometheus metrics at /metrics
 
+  // Bull Board Dashboard (conditionally enabled)
+  if (config.BULL_BOARD_ENABLED) {
+    logger.info('Enabling Bull Board dashboard...', { module: 'startup' });
+    const { setupBullBoard } = await import('./api/bullboard');
+    const { bullBoardAuth, validateBullBoardCredentials } = await import('./api/middleware/auth');
+
+    // Validate credentials are configured
+    validateBullBoardCredentials();
+
+    // Setup Bull Board
+    const serverAdapter = setupBullBoard();
+
+    // Register Bull Board with authentication
+    expressApp.use(config.BULL_BOARD_PATH, bullBoardAuth, serverAdapter.getRouter());
+
+    logger.info(`✅ Bull Board dashboard enabled at ${config.BULL_BOARD_PATH}`, {
+      module: 'startup',
+      path: config.BULL_BOARD_PATH,
+      username: config.BULL_BOARD_USERNAME,
+    });
+  } else {
+    logger.info('Bull Board dashboard disabled', { module: 'startup' });
+  }
+
   // 404 handler
   expressApp.use((req, res) => {
     res.status(404).json({

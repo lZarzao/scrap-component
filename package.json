@@ -27,6 +27,9 @@
   "author": "Luis Zarza",
   "license": "MIT",
   "dependencies": {
+    "@bull-board/api": "^7.0.0",
+    "@bull-board/express": "^7.0.0",
+    "@bull-board/ui": "^7.0.0",
     "@types/swagger-jsdoc": "^6.0.4",
     "@types/swagger-ui-express": "^4.1.8",
     "axios": "^1.16.0",
@@ -34,6 +37,7 @@
     "cheerio": "^1.2.0",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
+    "express-basic-auth": "^1.2.1",
     "ioredis": "^5.10.1",
     "knex": "^3.2.10",
     "node-cron": "^4.2.1",
