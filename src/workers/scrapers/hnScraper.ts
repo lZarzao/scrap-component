@@ -73,11 +73,17 @@ const extractItemId = ($row: cheerio.Cheerio<any>): string | null => {
 };
 
 /**
- * Scrape a single Hacker News page
+ * Result from scraping a single page
  */
-const scrapeHNPage = async (pageNum: number): Promise<RawHNData[]> => {
-  const url = pageNum === 1 ? `${BASE_URL}/newest` : `${BASE_URL}/newest?p=${pageNum}`;
+interface ScrapedPageResult {
+  stories: RawHNData[];
+  nextPageUrl: string | null;
+}
 
+/**
+ * Scrape a single Hacker News page by URL
+ */
+const scrapeHNPageByUrl = async (url: string, pageNum: number): Promise<ScrapedPageResult> => {
   await rateLimiter.wait(HOST);
 
   try {
@@ -157,25 +163,48 @@ const scrapeHNPage = async (pageNum: number): Promise<RawHNData[]> => {
       }
     });
 
+    // Extract "More" link for pagination (HN uses cursor-based pagination)
+    const moreLinkHref = $('a.morelink[rel="next"]').attr('href');
+    let nextPageUrl: string | null = null;
+
+    if (moreLinkHref) {
+      // More link is relative, prepend base URL
+      if (moreLinkHref.startsWith('http')) {
+        nextPageUrl = moreLinkHref;
+      } else if (moreLinkHref.startsWith('/')) {
+        nextPageUrl = `${BASE_URL}${moreLinkHref}`;
+      } else {
+        // Relative path without leading slash
+        nextPageUrl = `${BASE_URL}/${moreLinkHref}`;
+      }
+
+      logger.debug('Found next page URL', {
+        module: 'hnScraper',
+        nextPageUrl,
+      });
+    }
+
     logger.info('Scraped HN page', {
       module: 'hnScraper',
       pageNum,
       storiesFound: stories.length,
+      hasNextPage: !!nextPageUrl,
     });
 
-    return stories;
+    return { stories, nextPageUrl };
   } catch (error) {
     logger.error('Failed to scrape HN page', error as Error, {
       module: 'hnScraper',
       pageNum,
       url,
     });
-    return [];
+    return { stories: [], nextPageUrl: null };
   }
 };
 
 /**
  * Main scraper function: scrape Hacker News stories from multiple pages
+ * Uses cursor-based pagination by following "More" links
  */
 export const scrapeHN = async (maxPages: number = 2): Promise<RawHNData[]> => {
   logger.info('Starting HN scrape', {
@@ -184,12 +213,24 @@ export const scrapeHN = async (maxPages: number = 2): Promise<RawHNData[]> => {
   });
 
   const allStories: RawHNData[] = [];
+  let currentUrl: string | null = `${BASE_URL}/newest`;
 
   try {
-    // Scrape all pages
-    for (let page = 1; page <= maxPages; page++) {
-      const stories = await scrapeHNPage(page);
-      allStories.push(...stories);
+    // Scrape pages by following "More" links
+    for (let page = 1; page <= maxPages && currentUrl; page++) {
+      const result = await scrapeHNPageByUrl(currentUrl, page);
+      allStories.push(...result.stories);
+
+      // Move to next page using the extracted "More" link
+      currentUrl = result.nextPageUrl;
+
+      if (!currentUrl && page < maxPages) {
+        logger.warn('No more pages available', {
+          module: 'hnScraper',
+          stoppedAtPage: page,
+        });
+        break;
+      }
     }
 
     logger.info('HN scrape completed', {

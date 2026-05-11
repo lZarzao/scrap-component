@@ -19,14 +19,31 @@ export async function upsertBooks(books: CleanBook[]): Promise<number> {
   const db = getDatabase();
 
   try {
+    // Deduplicate books by upc (keep last occurrence)
+    const deduped = new Map<string, CleanBook>();
+    for (const book of books) {
+      deduped.set(book.upc, book);
+    }
+    const uniqueBooks = Array.from(deduped.values());
+
+    if (uniqueBooks.length < books.length) {
+      logger.warn('Removed duplicate books before upsert', {
+        module: 'upsert',
+        table: 'books',
+        originalCount: books.length,
+        uniqueCount: uniqueBooks.length,
+        duplicates: books.length - uniqueBooks.length,
+      });
+    }
+
     logger.info('Upserting books', {
       module: 'upsert',
       table: 'books',
-      count: books.length,
+      count: uniqueBooks.length,
     });
 
     // Prepare data for insert
-    const booksData = books.map((book) => ({
+    const booksData = uniqueBooks.map((book) => ({
       upc: book.upc,
       title: book.title,
       price_gbp: book.price_gbp,
@@ -58,10 +75,10 @@ export async function upsertBooks(books: CleanBook[]): Promise<number> {
     logger.info('Books upserted successfully', {
       module: 'upsert',
       table: 'books',
-      count: books.length,
+      count: uniqueBooks.length,
     });
 
-    return books.length;
+    return uniqueBooks.length;
   } catch (error) {
     logger.error('Failed to upsert books', error as Error, {
       module: 'upsert',
@@ -90,14 +107,31 @@ export async function upsertHNStories(stories: CleanHNStory[]): Promise<number> 
   const db = getDatabase();
 
   try {
+    // Deduplicate stories by hn_item_id (keep last occurrence)
+    const deduped = new Map<number, CleanHNStory>();
+    for (const story of stories) {
+      deduped.set(story.hn_item_id, story);
+    }
+    const uniqueStories = Array.from(deduped.values());
+
+    if (uniqueStories.length < stories.length) {
+      logger.warn('Removed duplicate HN stories before upsert', {
+        module: 'upsert',
+        table: 'hn_stories',
+        originalCount: stories.length,
+        uniqueCount: uniqueStories.length,
+        duplicates: stories.length - uniqueStories.length,
+      });
+    }
+
     logger.info('Upserting HN stories', {
       module: 'upsert',
       table: 'hn_stories',
-      count: stories.length,
+      count: uniqueStories.length,
     });
 
     // Prepare data for insert
-    const storiesData = stories.map((story) => ({
+    const storiesData = uniqueStories.map((story) => ({
       hn_item_id: story.hn_item_id,
       title: story.title,
       url: story.url,
@@ -129,10 +163,10 @@ export async function upsertHNStories(stories: CleanHNStory[]): Promise<number> 
     logger.info('HN stories upserted successfully', {
       module: 'upsert',
       table: 'hn_stories',
-      count: stories.length,
+      count: uniqueStories.length,
     });
 
-    return stories.length;
+    return uniqueStories.length;
   } catch (error) {
     logger.error('Failed to upsert HN stories', error as Error, {
       module: 'upsert',

@@ -46,13 +46,24 @@ export type CleanBook = z.infer<typeof CleanBookSchema>;
  * Raw HN story data from scraper (before transformation)
  */
 export const RawHNStorySchema = z.object({
-  item_id: z.number().int().positive(),
+  item_id: z
+    .union([z.number(), z.string()])
+    .transform((val) => (typeof val === 'string' ? parseInt(val, 10) : val))
+    .pipe(z.number().int().positive()),
   title: z.string().min(1).max(500),
   url: z.string().url().max(1000).nullable().optional(),
-  score: z.number().int().nonnegative().default(0),
+  score: z
+    .union([z.number(), z.string()])
+    .transform((val) => (typeof val === 'string' ? parseInt(val, 10) || 0 : val))
+    .pipe(z.number().int().nonnegative())
+    .default(0),
   author: z.string().min(1).max(100),
   age_text: z.string().max(50),
-  comment_count: z.number().int().nonnegative().default(0),
+  comment_count: z
+    .union([z.number(), z.string()])
+    .transform((val) => (typeof val === 'string' ? parseInt(val, 10) || 0 : val))
+    .pipe(z.number().int().nonnegative())
+    .default(0),
 });
 
 export type RawHNStory = z.infer<typeof RawHNStorySchema>;
