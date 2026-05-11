@@ -9,6 +9,11 @@ export default defineConfig({
     // Globals (optional, allows using describe/it without imports)
     globals: true,
 
+    // TypeScript configuration for tests
+    typecheck: {
+      tsconfig: './tsconfig.test.json',
+    },
+
     // Coverage configuration
     coverage: {
       provider: 'v8',

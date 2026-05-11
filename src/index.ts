@@ -44,6 +44,8 @@ const initApp = async (): Promise<Application> => {
   const storiesRouter = (await import('./api/routes/stories')).default;
   const metricsRouter = (await import('./api/routes/metrics')).default;
   const healthRouter = (await import('./api/routes/health')).default;
+  const docsRouter = (await import('./api/routes/docs')).default;
+  const prometheusRouter = (await import('./api/routes/prometheus')).default;
   const { errorHandler } = await import('./api/middleware/errorHandler');
 
   // Register routes
@@ -52,6 +54,8 @@ const initApp = async (): Promise<Application> => {
   expressApp.use('/api/v1/stories', storiesRouter);
   expressApp.use('/api/v1/metrics', metricsRouter);
   expressApp.use('/api/v1/health', healthRouter);
+  expressApp.use('/api/docs', docsRouter);
+  expressApp.use('/metrics', prometheusRouter); // Prometheus metrics at /metrics
 
   // 404 handler
   expressApp.use((req, res) => {
