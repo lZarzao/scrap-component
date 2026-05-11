@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { transformHNStory, transformHNStories } from '@/transformer/hnTransformer';
+import { transformHNStory, transformHNStories } from '../../../src/transformer/hnTransformer';
 import { z } from 'zod';
 
 describe('hnTransformer', () => {

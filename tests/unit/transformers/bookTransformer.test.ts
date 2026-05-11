@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { transformBook, transformBooks } from '@/transformer/bookTransformer';
+import { transformBook, transformBooks } from '../../../src/transformer/bookTransformer';
 import { z } from 'zod';
 
 describe('bookTransformer', () => {

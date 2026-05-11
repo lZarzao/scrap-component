@@ -5,7 +5,7 @@ import {
   RawHNStorySchema,
   CleanHNStorySchema,
   StoryTypeEnum,
-} from '@/types/schemas';
+} from '../../../src/types/schemas';
 import { z } from 'zod';
 
 describe('schemas', () => {

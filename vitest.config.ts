@@ -49,6 +49,7 @@ export default defineConfig({
     // setupFiles: ['./tests/setup.ts'],
   },
 
+  // Path aliases resolution (must match tsconfig paths)
   resolve: {
     alias: {
       '@': resolve(__dirname, './src'),
