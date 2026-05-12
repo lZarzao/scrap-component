@@ -8,17 +8,14 @@ import { logger } from '../logger';
 function detectStoryType(title: string): StoryType {
   const lower = title.toLowerCase();
 
-  // Check for Ask HN
   if (lower.includes('ask hn') || lower.startsWith('ask hn:')) {
     return 'ask';
   }
 
-  // Check for Show HN
   if (lower.includes('show hn') || lower.startsWith('show hn:')) {
     return 'show';
   }
 
-  // Check for Job postings
   if (
     lower.includes('[hiring]') ||
     lower.includes('(hiring)') ||
@@ -28,7 +25,6 @@ function detectStoryType(title: string): StoryType {
     return 'job';
   }
 
-  // Default to story
   return 'story';
 }
 
@@ -37,11 +33,9 @@ function detectStoryType(title: string): StoryType {
  * Throws ZodError if validation fails
  */
 export function transformHNStory(raw: unknown): CleanHNStory {
-  // First validate raw input structure
   const validated = RawHNStorySchema.parse(raw);
 
   try {
-    // Transform fields
     const transformed = {
       hn_item_id: validated.item_id,
       title: validated.title.trim(),
@@ -53,7 +47,6 @@ export function transformHNStory(raw: unknown): CleanHNStory {
       story_type: detectStoryType(validated.title),
     };
 
-    // Validate clean data structure
     const cleanStory = CleanHNStorySchema.parse(transformed);
 
     logger.debug('Successfully transformed HN story', {
@@ -105,7 +98,6 @@ export function transformHNStories(rawStories: unknown[]): CleanHNStory[] {
     failed: errors.length,
   });
 
-  // If all stories failed validation, throw error
   if (cleanStories.length === 0 && rawStories.length > 0) {
     throw new Error(
       `All ${rawStories.length} stories failed transformation. First error: ${errors[0]?.error}`

@@ -106,7 +106,6 @@ export async function retryDLQJob(jobId: string): Promise<boolean> {
     const dlqData = dlqJob.data;
     const originalJobPayload = dlqData.payload as any;
 
-    // Determine which queue to re-add to
     let targetQueue;
     let jobName;
 
@@ -123,12 +122,10 @@ export async function retryDLQJob(jobId: string): Promise<boolean> {
       throw new Error(`Unknown queue: ${dlqData.failedQueue}`);
     }
 
-    // Re-add job to original queue with incremented attempt
     const retriedJob = await targetQueue.add(jobName, originalJobPayload, {
       priority: dlqData.source === 'hn' || dlqData.source === 'hackernews' ? 1 : 2,
     });
 
-    // Remove from DLQ
     await dlqJob.remove();
 
     logger.info('DLQ job retried successfully', {
@@ -226,7 +223,6 @@ export async function getDLQStats(): Promise<{
 
     const total = waiting + active + completed + failed;
 
-    // Group by source and queue
     const bySource: Record<string, number> = {};
     const byQueue: Record<string, number> = {};
 

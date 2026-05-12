@@ -102,35 +102,28 @@ const start = async (): Promise<void> => {
   try {
     logger.info('🚀 Starting DataHarvest Pipeline Service...', { module: 'startup' });
 
-    // Initialize database
     logger.info('Initializing database...', { module: 'startup' });
     await initDatabase();
 
-    // Initialize queues
     logger.info('Initializing queue system...', { module: 'startup' });
     await initQueues();
 
-    // Initialize scraper worker
     logger.info('Initializing scraper worker...', { module: 'startup' });
     const { initScraperWorker } = await import('./workers/scraperWorker');
     initScraperWorker();
 
-    // Initialize transformer worker
     logger.info('Initializing transformer worker...', { module: 'startup' });
     const { createTransformerWorker } = await import('./transformer/transformerWorker');
     createTransformerWorker();
 
-    // Initialize persister worker
     logger.info('Initializing persister worker...', { module: 'startup' });
     const { createPersisterWorker } = await import('./persister/persisterWorker');
     createPersisterWorker();
 
-    // Initialize scheduler
     logger.info('Initializing scheduler...', { module: 'startup' });
     const { initScheduler } = await import('./scheduler');
     initScheduler();
 
-    // Initialize Express app
     logger.info('Initializing HTTP server...', { module: 'startup' });
     app = await initApp();
 
@@ -164,7 +157,6 @@ const shutdown = async (signal: string): Promise<void> => {
   isShuttingDown = true;
   logger.info(`🛑 Received ${signal}, starting graceful shutdown...`, { module: 'shutdown' });
 
-  // Set shutdown timeout
   const shutdownTimer = setTimeout(() => {
     const timeoutError = new Error('Graceful shutdown timeout exceeded, forcing exit');
     logger.error('Graceful shutdown timeout exceeded, forcing exit', timeoutError, {
@@ -174,7 +166,6 @@ const shutdown = async (signal: string): Promise<void> => {
   }, config.SHUTDOWN_TIMEOUT_MS);
 
   try {
-    // Stop accepting new connections
     if (server) {
       logger.info('Closing HTTP server...', { module: 'shutdown' });
       await new Promise<void>((resolve, reject) => {
@@ -186,31 +177,25 @@ const shutdown = async (signal: string): Promise<void> => {
       logger.info('HTTP server closed', { module: 'shutdown' });
     }
 
-    // Stop scheduler
     logger.info('Stopping scheduler...', { module: 'shutdown' });
     const { stopScheduler } = await import('./scheduler');
     stopScheduler();
 
-    // Close scraper worker
     logger.info('Closing scraper worker...', { module: 'shutdown' });
     const { closeScraperWorker } = await import('./workers/scraperWorker');
     await closeScraperWorker();
 
-    // Close transformer worker
     logger.info('Closing transformer worker...', { module: 'shutdown' });
     const { closeTransformerWorker } = await import('./transformer/transformerWorker');
     await closeTransformerWorker();
 
-    // Close persister worker
     logger.info('Closing persister worker...', { module: 'shutdown' });
     const { closePersisterWorker } = await import('./persister/persisterWorker');
     await closePersisterWorker();
 
-    // Close queue system (wait for in-flight jobs)
     logger.info('Closing queue system...', { module: 'shutdown' });
     await closeQueues();
 
-    // Close database connections
     logger.info('Closing database connections...', { module: 'shutdown' });
     await closeDatabase();
 
@@ -228,13 +213,10 @@ const shutdown = async (signal: string): Promise<void> => {
  * Setup graceful shutdown handlers
  */
 const setupGracefulShutdown = (): void => {
-  // Handle SIGTERM (Docker, Kubernetes)
   process.on('SIGTERM', () => shutdown('SIGTERM'));
 
-  // Handle SIGINT (Ctrl+C)
   process.on('SIGINT', () => shutdown('SIGINT'));
 
-  // Handle unhandled promise rejections
   process.on('unhandledRejection', (reason, promise) => {
     logger.error('Unhandled Promise Rejection', reason as Error, {
       module: 'uncaught',
@@ -242,7 +224,6 @@ const setupGracefulShutdown = (): void => {
     });
   });
 
-  // Handle uncaught exceptions
   process.on('uncaughtException', (error) => {
     logger.fatal('Uncaught Exception', error, { module: 'uncaught' });
     shutdown('UNCAUGHT_EXCEPTION');

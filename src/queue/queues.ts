@@ -12,17 +12,16 @@ export interface ScrapeJob {
   createdAt: string;
   payload: Record<string, unknown>;
   attempt: number;
-  priority?: 1 | 2; // 1=high (HN), 2=normal (books)
+  priority?: 1 | 2;
 }
 
 export interface RawDataJob {
   jobId: string;
   source: 'books' | 'hackernews';
   rawData: unknown;
-  scrapedAt?: string; // Optional timestamp for Phase 3 compatibility
+  scrapedAt?: string;
 }
 
-// Use the Zod schema type for consistency
 export type ProcessedDataJob = ProcessedDataJobType;
 
 export interface DLQJob {
@@ -130,7 +129,6 @@ export const queues = {
  */
 export const initQueues = async (): Promise<void> => {
   try {
-    // Test Redis connection
     const redis = createRedisClient();
     await redis.ping();
     await redis.quit();

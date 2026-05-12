@@ -104,7 +104,7 @@ export const RawDataJobSchema = z.object({
   jobId: z.string().uuid(),
   source: z.enum(['books', 'hackernews']),
   rawData: z.array(z.unknown()),
-  scrapedAt: z.string().datetime().optional(), // Optional for backward compatibility with Phase 2 scraper
+  scrapedAt: z.string().datetime().optional(),
 });
 
 export type RawDataJob = z.infer<typeof RawDataJobSchema>;

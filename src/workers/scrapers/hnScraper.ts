@@ -103,40 +103,29 @@ const scrapeHNPageByUrl = async (url: string, pageNum: number): Promise<ScrapedP
     const $ = cheerio.load(response.data);
     const stories: RawHNData[] = [];
 
-    // HN uses a table with class "itemlist"
     $('tr.athing').each((_, element) => {
       const $row = $(element);
       const $subtext = $row.next('tr').find('td.subtext');
 
-      // Extract item ID
       const item_id = extractItemId($row);
       if (!item_id) {
         logger.debug('Could not extract item_id, skipping', { module: 'hnScraper' });
-        return; // Skip this item
+        return;
       }
 
-      // Extract title
       const $titleLink = $row.find('span.titleline > a').first();
       const title = $titleLink.text().trim() || '';
 
-      // Extract URL (null for self-posts/Ask HN)
       let url = $titleLink.attr('href') || null;
-      // If URL is relative (starts with item?id=), it's a self-post
       if (url && url.startsWith('item?id=')) {
-        url = null; // Self-post
+        url = null;
       }
 
-      // Extract score
       const scoreText = $subtext.find('span.score').text().trim();
       const score = scoreText.replace(' points', '').replace(' point', '') || '0';
-
-      // Extract author
       const author = $subtext.find('a.hnuser').text().trim() || 'unknown';
-
-      // Extract age text
       const ageText = $subtext.find('span.age').text().trim() || 'unknown';
 
-      // Extract comment count
       const commentsText = $subtext.find('a:contains("comment")').text().trim();
       let comment_count = '0';
       if (commentsText) {
@@ -146,7 +135,6 @@ const scrapeHNPageByUrl = async (url: string, pageNum: number): Promise<ScrapedP
         }
       }
 
-      // Detect story type
       const story_type = detectStoryType(title);
 
       if (title && item_id) {
@@ -216,12 +204,10 @@ export const scrapeHN = async (maxPages: number = 2): Promise<RawHNData[]> => {
   let currentUrl: string | null = `${BASE_URL}/newest`;
 
   try {
-    // Scrape pages by following "More" links
     for (let page = 1; page <= maxPages && currentUrl; page++) {
       const result = await scrapeHNPageByUrl(currentUrl, page);
       allStories.push(...result.stories);
 
-      // Move to next page using the extracted "More" link
       currentUrl = result.nextPageUrl;
 
       if (!currentUrl && page < maxPages) {

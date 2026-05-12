@@ -35,7 +35,7 @@ async function updateJobStatus(
       update.error_message = error;
     }
 
-    await db('scrape_jobs').where({ id: jobId }).update(update); // Fixed: use 'id' instead of 'job_id'
+    await db('scrape_jobs').where({ id: jobId }).update(update);
 
     logger.debug('Updated scrape_jobs status', {
       module: 'persisterWorker',
@@ -66,10 +66,8 @@ async function processPersistJob(job: Job<ProcessedDataJob>): Promise<void> {
   });
 
   try {
-    // Validate job data
     const validatedJob = ProcessedDataJobSchema.parse(job.data);
 
-    // Persist based on source
     let rowsAffected = 0;
 
     if (source === 'books') {
@@ -112,7 +110,6 @@ async function processPersistJob(job: Job<ProcessedDataJob>): Promise<void> {
       throw new Error(`Unknown source: ${source}`);
     }
 
-    // Update scrape_jobs status
     await updateJobStatus(jobId, 'completed');
 
     logger.info('Persistence completed', {
@@ -134,12 +131,9 @@ async function processPersistJob(job: Job<ProcessedDataJob>): Promise<void> {
       stackTrace,
     });
 
-    // Check if this is the last attempt
     if (job.attemptsMade + 1 >= (job.opts.attempts || 5)) {
-      // Update scrape_jobs status
       await updateJobStatus(jobId, 'failed', errorMsg);
 
-      // Move to DLQ
       await queues.dlq.add(`dlq-persist-${jobId}`, {
         originalJobId: jobId,
         source,
@@ -159,7 +153,6 @@ async function processPersistJob(job: Job<ProcessedDataJob>): Promise<void> {
       });
     }
 
-    // Re-throw to trigger BullMQ retry
     throw error;
   }
 }
@@ -193,7 +186,6 @@ export function createPersisterWorker(): Worker<ProcessedDataJob> {
     }
   );
 
-  // Event listeners
   worker.on('ready', () => {
     logger.info('Persister worker ready', {
       module: 'persisterWorker',

@@ -42,7 +42,6 @@ export async function upsertBooks(books: CleanBook[]): Promise<number> {
       count: uniqueBooks.length,
     });
 
-    // Prepare data for insert
     const booksData = uniqueBooks.map((book) => ({
       upc: book.upc,
       title: book.title,
@@ -55,8 +54,6 @@ export async function upsertBooks(books: CleanBook[]): Promise<number> {
       scraped_at: db.fn.now(),
     }));
 
-    // Use Knex's onConflict for UPSERT
-    // ON CONFLICT (upc) DO UPDATE
     await db('books')
       .insert(booksData)
       .onConflict('upc')
@@ -69,7 +66,6 @@ export async function upsertBooks(books: CleanBook[]): Promise<number> {
         description: db.raw('EXCLUDED.description'),
         num_reviews: db.raw('EXCLUDED.num_reviews'),
         scraped_at: db.raw('EXCLUDED.scraped_at'),
-        // updated_at is handled by trigger
       });
 
     logger.info('Books upserted successfully', {
@@ -130,7 +126,6 @@ export async function upsertHNStories(stories: CleanHNStory[]): Promise<number> 
       count: uniqueStories.length,
     });
 
-    // Prepare data for insert
     const storiesData = uniqueStories.map((story) => ({
       hn_item_id: story.hn_item_id,
       title: story.title,
@@ -143,8 +138,6 @@ export async function upsertHNStories(stories: CleanHNStory[]): Promise<number> 
       scraped_at: db.fn.now(),
     }));
 
-    // Use Knex's onConflict for UPSERT
-    // ON CONFLICT (hn_item_id) DO UPDATE
     await db('hn_stories')
       .insert(storiesData)
       .onConflict('hn_item_id')
@@ -157,7 +150,6 @@ export async function upsertHNStories(stories: CleanHNStory[]): Promise<number> 
         comment_count: db.raw('EXCLUDED.comment_count'),
         story_type: db.raw('EXCLUDED.story_type'),
         scraped_at: db.raw('EXCLUDED.scraped_at'),
-        // updated_at is handled by trigger
       });
 
     logger.info('HN stories upserted successfully', {

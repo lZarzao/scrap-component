@@ -20,7 +20,6 @@ export const initScheduler = (): void => {
 
   logger.info('Initializing scheduler...', { module: 'scheduler' });
 
-  // Books scraping schedule (default: daily at 02:00 UTC)
   booksTask = cron.schedule(config.BOOKS_CRON, async () => {
     try {
       logger.info('Books cron job triggered', {
@@ -35,7 +34,6 @@ export const initScheduler = (): void => {
     }
   });
 
-  // Hacker News scraping schedule (default: every 15 minutes)
   hnTask = cron.schedule(config.HN_CRON, async () => {
     try {
       logger.info('HN cron job triggered', {

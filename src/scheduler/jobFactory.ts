@@ -11,7 +11,7 @@ export const createScrapeJob = async (
   payload: Record<string, unknown> = {}
 ): Promise<string> => {
   const jobId = uuidv4();
-  const priority = source === 'hackernews' ? 1 : 2; // HN is high priority
+  const priority = source === 'hackernews' ? 1 : 2;
 
   const job: ScrapeJob = {
     jobId,
@@ -23,7 +23,6 @@ export const createScrapeJob = async (
   };
 
   try {
-    // Insert job record in database
     const db = getDatabase();
     await db('scrape_jobs').insert({
       id: jobId,
@@ -33,7 +32,6 @@ export const createScrapeJob = async (
       metadata: payload,
     });
 
-    // Add job to BullMQ queue
     await queues.pending.add(`scrape-${source}-${jobId}`, job, {
       priority,
       jobId,

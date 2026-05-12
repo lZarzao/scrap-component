@@ -35,7 +35,7 @@ const extractRatingText = (ratingClass: string): string => {
     }
   }
 
-  return 'Unknown'; // Unknown rating
+  return 'Unknown';
 };
 
 /**
@@ -54,13 +54,8 @@ const scrapeBookDetail = async (url: string): Promise<Partial<RawBookData>> => {
 
     const $ = cheerio.load(response.data);
 
-    // Extract UPC
     const upc = $('th:contains("UPC")').next('td').text().trim() || undefined;
-
-    // Extract description
     const description = $('#product_description').next('p').text().trim() || undefined;
-
-    // Extract number of reviews
     const numReviewsText = $('th:contains("Number of reviews")').next('td').text().trim();
     const num_reviews = numReviewsText || '0';
 
@@ -81,7 +76,6 @@ const scrapeBookDetail = async (url: string): Promise<Partial<RawBookData>> => {
       module: 'booksScraper',
       url,
     });
-    // Return empty object if detail page fails (graceful handling)
     return {};
   }
 };
@@ -114,21 +108,15 @@ const scrapeCataloguePage = async (pageNum: number): Promise<RawBookData[]> => {
     const $ = cheerio.load(response.data);
     const books: RawBookData[] = [];
 
-    // Extract books from the page
     $('article.product_pod').each((_, element) => {
       const $book = $(element);
 
-      // Extract basic info from catalogue page
       const title = $book.find('h3 a').attr('title') || '';
       const price = $book.find('p.price_color').text().trim() || '0';
       const ratingClass = $book.find('p.star-rating').attr('class') || '';
-      const rating = extractRatingText(ratingClass); // Keep as text for RAW data
+      const rating = extractRatingText(ratingClass);
       const availability = $book.find('p.availability').text().trim() || 'Unknown';
-
-      // Extract category (breadcrumb)
       const category = $('ul.breadcrumb li').eq(2).find('a').text().trim() || 'Unknown';
-
-      // Extract product URL (relative path)
       const relativeUrl = $book.find('h3 a').attr('href') || '';
       const product_url = relativeUrl.startsWith('http')
         ? relativeUrl

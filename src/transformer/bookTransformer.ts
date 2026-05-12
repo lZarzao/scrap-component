@@ -17,7 +17,6 @@ const RATING_MAP: Record<string, number> = {
  * Examples: "£45.50" -> 45.50, "£12.99" -> 12.99
  */
 function parsePrice(priceStr: string): number {
-  // Remove currency symbol and whitespace
   const cleaned = priceStr.replace(/[£$€\s]/g, '');
   const price = parseFloat(cleaned);
 
@@ -33,7 +32,6 @@ function parsePrice(priceStr: string): number {
  * Examples: "Three" -> 3, "Five" -> 5, 3 -> 3, "3" -> 3
  */
 function parseRating(ratingInput: string | number): number {
-  // If already a number, validate and return
   if (typeof ratingInput === 'number') {
     if (ratingInput >= 1 && ratingInput <= 5) {
       return ratingInput;
@@ -41,13 +39,11 @@ function parseRating(ratingInput: string | number): number {
     throw new Error(`Invalid rating number: ${ratingInput}. Expected 1-5`);
   }
 
-  // If string, try to parse as number first
   const asNumber = parseInt(ratingInput, 10);
   if (!isNaN(asNumber) && asNumber >= 1 && asNumber <= 5) {
     return asNumber;
   }
 
-  // Try text mapping
   const rating = RATING_MAP[ratingInput];
 
   if (!rating) {
@@ -77,7 +73,6 @@ export function transformBook(raw: unknown): CleanBook {
   const validated = RawBookSchema.parse(raw);
 
   try {
-    // Transform fields
     const transformed = {
       upc: validated.upc,
       title: validated.title.trim(),
@@ -89,7 +84,6 @@ export function transformBook(raw: unknown): CleanBook {
       num_reviews: validated.num_reviews,
     };
 
-    // Validate clean data structure
     const cleanBook = CleanBookSchema.parse(transformed);
 
     logger.debug('Successfully transformed book', {
@@ -140,7 +134,6 @@ export function transformBooks(rawBooks: unknown[]): CleanBook[] {
     failed: errors.length,
   });
 
-  // If all books failed validation, throw error
   if (cleanBooks.length === 0 && rawBooks.length > 0) {
     throw new Error(
       `All ${rawBooks.length} books failed transformation. First error: ${errors[0]?.error}`

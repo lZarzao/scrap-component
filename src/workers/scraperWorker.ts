@@ -25,14 +25,12 @@ const processScrapeJob = async (job: Job<ScrapeJob>): Promise<void> => {
   });
 
   try {
-    // Update job status in database
     const db = getDatabase();
     await db('scrape_jobs').where({ id: jobId }).update({
       status: 'processing',
       started_at: new Date(),
     });
 
-    // Call appropriate scraper based on source
     let rawData: unknown;
 
     if (source === 'books') {
@@ -52,19 +50,17 @@ const processScrapeJob = async (job: Job<ScrapeJob>): Promise<void> => {
       itemsScraped: Array.isArray(rawData) ? rawData.length : 0,
     });
 
-    // Create raw data job and add to raw queue
     const rawDataJob: RawDataJob = {
       jobId,
       source,
       rawData,
-      scrapedAt: new Date().toISOString(), // Add timestamp for Phase 3 compatibility
+      scrapedAt: new Date().toISOString(),
     };
 
     await queues.raw.add(`raw-${source}-${jobId}`, rawDataJob, {
       jobId: `raw-${jobId}`,
     });
 
-    // Update job status to completed
     await db('scrape_jobs').where({ id: jobId }).update({
       status: 'completed',
       completed_at: new Date(),
@@ -85,7 +81,6 @@ const processScrapeJob = async (job: Job<ScrapeJob>): Promise<void> => {
       attempt: job.attemptsMade + 1,
     });
 
-    // Update job status in database
     const db = getDatabase();
     await db('scrape_jobs').where({ id: jobId }).update({
       status: 'failed',
@@ -93,12 +88,11 @@ const processScrapeJob = async (job: Job<ScrapeJob>): Promise<void> => {
       error_message: errorMessage,
     });
 
-    // If this was the last attempt, move to DLQ
     if (job.attemptsMade >= (job.opts.attempts || 3) - 1) {
       await moveToDLQ(job, error as Error, 'scrape-pending');
     }
 
-    throw error; // Re-throw to let BullMQ handle retry
+    throw error;
   }
 };
 
@@ -126,12 +120,11 @@ export const initScraperWorker = (): void => {
       concurrency: config.SCRAPER_CONCURRENCY,
       limiter: {
         max: config.SCRAPER_CONCURRENCY,
-        duration: 1000, // Max N jobs per second
+        duration: 1000,
       },
     }
   );
 
-  // Worker event handlers
   scraperWorker.on('completed', (job) => {
     logger.info('Scraper job completed', {
       module: 'scraperWorker',
@@ -171,7 +164,6 @@ export const closeScraperWorker = async (): Promise<void> => {
   logger.info('Closing scraper worker...', { module: 'scraperWorker' });
 
   try {
-    // Force close with timeout
     await Promise.race([
       scraperWorker.close(),
       new Promise((_, reject) => setTimeout(() => reject(new Error('Worker close timeout')), 5000)),

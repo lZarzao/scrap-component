@@ -21,7 +21,6 @@ client.collectDefaultMetrics({
  * Custom metrics
  */
 
-// Queue metrics
 export const queueDepthGauge = new client.Gauge({
   name: 'dataharvest_queue_depth',
   help: 'Number of jobs in queue by state',
@@ -44,7 +43,6 @@ export const jobProcessingDuration = new client.Histogram({
   registers: [register],
 });
 
-// Scraping metrics
 export const scrapeRequestsCounter = new client.Counter({
   name: 'dataharvest_scrape_requests_total',
   help: 'Total number of scrape requests',
@@ -67,7 +65,6 @@ export const scrapedRecordsCounter = new client.Counter({
   registers: [register],
 });
 
-// Database metrics
 export const databaseRecordsGauge = new client.Gauge({
   name: 'dataharvest_database_records_total',
   help: 'Total number of records in database',
@@ -82,7 +79,6 @@ export const databaseOperationsCounter = new client.Counter({
   registers: [register],
 });
 
-// Rate limiter metrics
 export const rateLimiterDelaysCounter = new client.Counter({
   name: 'dataharvest_rate_limiter_delays_total',
   help: 'Total number of rate limiter delays',
@@ -201,7 +197,6 @@ export const updateAllMetrics = async (): Promise<void> => {
  * Get metrics in Prometheus text format
  */
 export const getMetrics = async (): Promise<string> => {
-  // Update metrics before returning
   await updateAllMetrics();
   return register.metrics();
 };

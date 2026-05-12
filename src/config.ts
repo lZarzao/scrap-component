@@ -93,22 +93,10 @@ const loadConfig = (): Config => {
   }
 };
 
-/**
- * Exported configuration instance
- */
 export const config = loadConfig();
 
-/**
- * Check if running in production
- */
 export const isProduction = (): boolean => config.NODE_ENV === 'production';
 
-/**
- * Check if running in development
- */
 export const isDevelopment = (): boolean => config.NODE_ENV === 'development';
 
-/**
- * Check if running in test
- */
 export const isTest = (): boolean => config.NODE_ENV === 'test';

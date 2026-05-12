@@ -39,7 +39,6 @@ class RateLimiter {
       }
     }
 
-    // Update last request time
     this.lastRequestTime.set(host, Date.now());
   }
 
@@ -79,8 +78,6 @@ class RateLimiter {
   }
 }
 
-// Export singleton instance
 export const rateLimiter = new RateLimiter();
 
-// Export class for testing
 export { RateLimiter };

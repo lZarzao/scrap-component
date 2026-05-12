@@ -30,10 +30,8 @@ async function processTransformJob(job: Job<RawDataJob>): Promise<void> {
   });
 
   try {
-    // Validate job data
     const validatedJob = RawDataJobSchema.parse(job.data);
 
-    // Transform based on source
     let cleanData: Array<
       import('../types/schemas').CleanBook | import('../types/schemas').CleanHNStory
     >;
@@ -74,7 +72,6 @@ async function processTransformJob(job: Job<RawDataJob>): Promise<void> {
       throw new Error(`Unknown source: ${source}`);
     }
 
-    // Push to processed queue
     await queues.processed.add(
       `process-${source}-${jobId}`,
       {
@@ -107,9 +104,7 @@ async function processTransformJob(job: Job<RawDataJob>): Promise<void> {
       stackTrace,
     });
 
-    // Check if this is the last attempt
     if (job.attemptsMade + 1 >= (job.opts.attempts || 2)) {
-      // Move to DLQ
       await queues.dlq.add(`dlq-transform-${jobId}`, {
         originalJobId: jobId,
         source,
@@ -129,7 +124,6 @@ async function processTransformJob(job: Job<RawDataJob>): Promise<void> {
       });
     }
 
-    // Re-throw to trigger BullMQ retry
     throw error;
   }
 }
@@ -163,7 +157,6 @@ export function createTransformerWorker(): Worker<RawDataJob> {
     }
   );
 
-  // Event listeners
   worker.on('ready', () => {
     logger.info('Transformer worker ready', {
       module: 'transformerWorker',

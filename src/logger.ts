@@ -15,7 +15,6 @@ export interface LogContext {
 // Only in development AND when running locally (not in Docker)
 const usePrettyPrint = process.env.NODE_ENV === 'development' && !process.env.DOCKER_ENV;
 
-// Create base logger instance
 const baseLogger = pino({
   level: process.env.LOG_LEVEL || 'info',
   formatters: {
@@ -49,46 +48,28 @@ const baseLogger = pino({
 class Logger {
   private context: LogContext = {};
 
-  /**
-   * Create a child logger with additional context
-   */
   child(context: LogContext): Logger {
     const childLogger = new Logger();
     childLogger.context = { ...this.context, ...context };
     return childLogger;
   }
 
-  /**
-   * Log trace message
-   */
   trace(message: string, additionalContext?: LogContext): void {
     baseLogger.trace({ ...this.context, ...additionalContext }, message);
   }
 
-  /**
-   * Log debug message
-   */
   debug(message: string, additionalContext?: LogContext): void {
     baseLogger.debug({ ...this.context, ...additionalContext }, message);
   }
 
-  /**
-   * Log info message
-   */
   info(message: string, additionalContext?: LogContext): void {
     baseLogger.info({ ...this.context, ...additionalContext }, message);
   }
 
-  /**
-   * Log warning message
-   */
   warn(message: string, additionalContext?: LogContext): void {
     baseLogger.warn({ ...this.context, ...additionalContext }, message);
   }
 
-  /**
-   * Log error message
-   */
   error(message: string, error?: Error, additionalContext?: LogContext): void {
     baseLogger.error(
       {
@@ -100,9 +81,6 @@ class Logger {
     );
   }
 
-  /**
-   * Log fatal message
-   */
   fatal(message: string, error?: Error, additionalContext?: LogContext): void {
     baseLogger.fatal(
       {
