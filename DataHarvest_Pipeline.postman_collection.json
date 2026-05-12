@@ -1,0 +1,545 @@
+{
+  "info": {
+    "name": "DataHarvest Pipeline Service",
+    "description": "Complete API collection for DataHarvest Pipeline Service - Web scraping and data pipeline system built with Node.js, TypeScript, BullMQ, and PostgreSQL.\n\n## Getting Started\n\n1. Make sure the server is running on `http://localhost:3000`\n2. Import this collection into Postman\n3. Use the requests to interact with the API\n\n## Authentication\n\n- Most endpoints don't require authentication\n- Bull Board dashboard (`/admin/queues`) requires HTTP Basic Auth (see environment variables)\n\n## Variables\n\nThe collection uses the following variables:\n- `baseUrl`: http://localhost:3000\n- `jobId`: Auto-populated from trigger responses\n- `bookUpc`: Auto-populated from book list\n- `hnItemId`: Auto-populated from story list",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "1234567890"
+  },
+  "item": [
+    {
+      "name": "Health & Monitoring",
+      "item": [
+        {
+          "name": "Health Check",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/health",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "health"]
+            },
+            "description": "Check system health including database and Redis connectivity.\n\n**Success Response:**\n```json\n{\n  \"status\": \"healthy\",\n  \"database\": \"connected\",\n  \"redis\": \"connected\",\n  \"timestamp\": \"2026-05-11T15:30:00.000Z\",\n  \"uptime\": 45.2\n}\n```"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Metrics",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/metrics",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "metrics"]
+            },
+            "description": "Get comprehensive metrics including queue statistics, throughput, and source-specific metrics.\n\n**Response includes:**\n- Queue depths (waiting, active, completed, failed)\n- Throughput metrics (last hour)\n- Source-specific metrics (last success timestamp)\n- Average processing latency"
+          },
+          "response": []
+        },
+        {
+          "name": "Prometheus Metrics",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/metrics",
+              "host": ["{{baseUrl}}"],
+              "path": ["metrics"]
+            },
+            "description": "Get metrics in Prometheus text format for monitoring and observability.\n\n**Includes:**\n- Process metrics (CPU, memory)\n- Queue metrics (depth, processed jobs)\n- Database metrics (record counts)\n- Health metrics (component status)"
+          },
+          "response": []
+        }
+      ],
+      "description": "Health checks and monitoring endpoints"
+    },
+    {
+      "name": "Job Management",
+      "item": [
+        {
+          "name": "Trigger Books Scrape",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    pm.collectionVariables.set('jobId', response.jobId);",
+                  "    pm.test('Job triggered successfully', () => {",
+                  "        pm.expect(response.success).to.be.true;",
+                  "        pm.expect(response.source).to.equal('books');",
+                  "    });",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"source\": \"books\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/jobs/trigger",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "jobs", "trigger"]
+            },
+            "description": "Manually trigger a scraping job for Books to Scrape.\n\n**Request Body:**\n```json\n{\n  \"source\": \"books\"\n}\n```\n\n**Success Response:**\n```json\n{\n  \"success\": true,\n  \"jobId\": \"a1b2c3d4-...\",\n  \"source\": \"books\",\n  \"status\": \"queued\",\n  \"queuedAt\": \"2026-05-11T...\"\n}\n```\n\n**Note:** The scraping process takes approximately 10-30 seconds depending on the number of books and network latency."
+          },
+          "response": []
+        },
+        {
+          "name": "Trigger Hacker News Scrape",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    pm.collectionVariables.set('jobId', response.jobId);",
+                  "    pm.test('Job triggered successfully', () => {",
+                  "        pm.expect(response.success).to.be.true;",
+                  "        pm.expect(response.source).to.equal('hackernews');",
+                  "    });",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"source\": \"hackernews\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/jobs/trigger",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "jobs", "trigger"]
+            },
+            "description": "Manually trigger a scraping job for Hacker News.\n\n**Request Body:**\n```json\n{\n  \"source\": \"hackernews\"\n}\n```\n\n**Success Response:**\n```json\n{\n  \"success\": true,\n  \"jobId\": \"a1b2c3d4-...\",\n  \"source\": \"hackernews\",\n  \"status\": \"queued\",\n  \"queuedAt\": \"2026-05-11T...\"\n}\n```\n\n**Note:** The scraping process takes approximately 5-15 seconds."
+          },
+          "response": []
+        },
+        {
+          "name": "List All Jobs",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/jobs?limit=20&offset=0",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "jobs"],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "20",
+                  "description": "Number of results per page (default: 20)"
+                },
+                {
+                  "key": "offset",
+                  "value": "0",
+                  "description": "Number of records to skip (default: 0)"
+                },
+                {
+                  "key": "status",
+                  "value": "completed",
+                  "description": "Filter by status (pending|processing|completed|failed)",
+                  "disabled": true
+                },
+                {
+                  "key": "source",
+                  "value": "books",
+                  "description": "Filter by source (books|hackernews)",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "List all scraping jobs with optional filters.\n\n**Query Parameters:**\n- `limit`: Number of results (default: 20)\n- `offset`: Pagination offset (default: 0)\n- `status`: Filter by status (optional)\n- `source`: Filter by source (optional)\n\n**Response includes:**\n- Total count\n- Pagination metadata\n- Job list with status, timestamps, and metadata"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Job by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/jobs/{{jobId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "jobs", "{{jobId}}"]
+            },
+            "description": "Get details of a specific job by its ID.\n\n**Note:** The `jobId` variable is automatically populated when you trigger a job.\n\n**Response includes:**\n- Job ID, source, status\n- Timestamps (triggered, started, completed)\n- Error message (if failed)\n- Metadata"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Dead Letter Queue",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/jobs/dlq?limit=50",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "jobs", "dlq"],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "50",
+                  "description": "Max number of failed jobs to retrieve (default: 50)"
+                }
+              ]
+            },
+            "description": "Inspect the Dead Letter Queue (DLQ) to see jobs that failed after exhausting all retries.\n\n**Response includes:**\n- Failed job count\n- Job details with error messages\n- Stack traces\n- Original payloads\n- Number of attempts made"
+          },
+          "response": []
+        },
+        {
+          "name": "Retry Job from DLQ",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/jobs/dlq/{{jobId}}/retry",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "jobs", "dlq", "{{jobId}}", "retry"]
+            },
+            "description": "Re-queue a failed job from the Dead Letter Queue.\n\n**Note:** The job will be added back to the `scrape:pending` queue with its original payload.\n\n**Use Case:** Retry a job after fixing the underlying issue (e.g., network connectivity restored, target site back online)."
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Job from DLQ",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/jobs/dlq/{{jobId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "jobs", "dlq", "{{jobId}}"]
+            },
+            "description": "Remove a specific job from the Dead Letter Queue.\n\n**Use Case:** Clean up jobs that cannot be retried or are no longer relevant."
+          },
+          "response": []
+        }
+      ],
+      "description": "Job triggering, monitoring, and DLQ management"
+    },
+    {
+      "name": "Books Data",
+      "item": [
+        {
+          "name": "List Books",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    if (response.data && response.data.length > 0) {",
+                  "        pm.collectionVariables.set('bookUpc', response.data[0].upc);",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/books?limit=20&page=1",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "books"],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "20",
+                  "description": "Results per page (default: 20)"
+                },
+                {
+                  "key": "page",
+                  "value": "1",
+                  "description": "Page number (default: 1)"
+                },
+                {
+                  "key": "category",
+                  "value": "Fiction",
+                  "description": "Filter by category",
+                  "disabled": true
+                },
+                {
+                  "key": "minRating",
+                  "value": "4",
+                  "description": "Minimum star rating (1-5)",
+                  "disabled": true
+                },
+                {
+                  "key": "available",
+                  "value": "true",
+                  "description": "Filter by availability",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "List all scraped books with optional filters and pagination.\n\n**Query Parameters:**\n- `limit`: Results per page (default: 20, max: 100)\n- `page`: Page number (default: 1)\n- `category`: Filter by category (e.g., Fiction, Poetry)\n- `minRating`: Minimum star rating (1-5)\n- `available`: Filter by availability (true/false)\n\n**Response includes:**\n- Book data (title, price, rating, category, etc.)\n- Pagination metadata\n- Total count"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Book by UPC",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/books/{{bookUpc}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "books", "{{bookUpc}}"]
+            },
+            "description": "Get a specific book by its Universal Product Code (UPC).\n\n**Note:** The `bookUpc` variable is automatically populated when you list books.\n\n**Response includes:**\n- Full book details\n- Title, price, rating, availability\n- Category, description, number of reviews\n- UPC (unique identifier)\n- Timestamps (scraped_at, updated_at)"
+          },
+          "response": []
+        },
+        {
+          "name": "Books - Filter by High Rating",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/books?minRating=4&limit=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "books"],
+              "query": [
+                {
+                  "key": "minRating",
+                  "value": "4"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            },
+            "description": "Example: Get only books with 4 or 5 stars rating."
+          },
+          "response": []
+        },
+        {
+          "name": "Books - Filter by Category",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/books?category=Poetry&limit=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "books"],
+              "query": [
+                {
+                  "key": "category",
+                  "value": "Poetry"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            },
+            "description": "Example: Get only books in the Poetry category."
+          },
+          "response": []
+        }
+      ],
+      "description": "Access scraped book data from Books to Scrape"
+    },
+    {
+      "name": "Hacker News Stories",
+      "item": [
+        {
+          "name": "List Stories",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    if (response.data && response.data.length > 0) {",
+                  "        pm.collectionVariables.set('hnItemId', response.data[0].hn_item_id);",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/stories?limit=20&page=1",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "stories"],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "20",
+                  "description": "Results per page (default: 20)"
+                },
+                {
+                  "key": "page",
+                  "value": "1",
+                  "description": "Page number (default: 1)"
+                },
+                {
+                  "key": "type",
+                  "value": "story",
+                  "description": "Filter by type (story|ask|show|job)",
+                  "disabled": true
+                },
+                {
+                  "key": "minScore",
+                  "value": "10",
+                  "description": "Minimum score",
+                  "disabled": true
+                },
+                {
+                  "key": "author",
+                  "value": "username",
+                  "description": "Filter by author",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "List all scraped Hacker News stories with optional filters.\n\n**Query Parameters:**\n- `limit`: Results per page (default: 20, max: 100)\n- `page`: Page number (default: 1)\n- `type`: Filter by story type (story, ask, show, job)\n- `minScore`: Minimum score\n- `author`: Filter by author username\n\n**Response includes:**\n- Story data (title, URL, score, author, etc.)\n- Pagination metadata\n- Total count"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Story by HN Item ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/stories/{{hnItemId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "stories", "{{hnItemId}}"]
+            },
+            "description": "Get a specific story by its Hacker News item ID.\n\n**Note:** The `hnItemId` variable is automatically populated when you list stories.\n\n**Response includes:**\n- Full story details\n- Title, URL, score, author\n- Comment count, story type\n- HN item ID (unique identifier)\n- Timestamps (scraped_at, updated_at)"
+          },
+          "response": []
+        },
+        {
+          "name": "Stories - Filter by Type (Show HN)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/stories?type=show&limit=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "stories"],
+              "query": [
+                {
+                  "key": "type",
+                  "value": "show"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            },
+            "description": "Example: Get only 'Show HN' stories."
+          },
+          "response": []
+        },
+        {
+          "name": "Stories - Filter by High Score",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/stories?minScore=50&limit=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "stories"],
+              "query": [
+                {
+                  "key": "minScore",
+                  "value": "50"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            },
+            "description": "Example: Get stories with score >= 50 (popular stories)."
+          },
+          "response": []
+        }
+      ],
+      "description": "Access scraped Hacker News stories"
+    },
+    {
+      "name": "Documentation",
+      "item": [
+        {
+          "name": "OpenAPI Spec (JSON)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/docs/spec",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "docs", "spec"]
+            },
+            "description": "Get the OpenAPI 3.1 specification in JSON format.\n\n**Use Cases:**\n- Import into API client tools\n- Generate client SDKs\n- API contract validation\n- Integration with API gateways"
+          },
+          "response": []
+        }
+      ],
+      "description": "API documentation and specifications"
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3000",
+      "type": "string"
+    },
+    {
+      "key": "jobId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "bookUpc",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "hnItemId",
+      "value": "",
+      "type": "string"
+    }
+  ]
+}
